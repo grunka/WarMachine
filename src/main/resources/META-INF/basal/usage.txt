@@ -1,0 +1,12 @@
+Usage:
+java -jar ${artifactId}-${version}.jar [--package <file>] [-p <port>] [-l <log level>] [<context path>=<war file>]*
+
+port = Port number where the server will listen
+log level = The logging level, default is INFO
+context path = The context path used for the war
+war file = Path to the war file
+
+--package <file>
+Creates a new runnable jar containing all the wars and using the options supplied and saves to <file> instead of starting the server.
+The resulting file can then be started using only "java -jar <file>"
+
