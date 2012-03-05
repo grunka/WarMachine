@@ -1,5 +1,24 @@
 package se.grunka.basal;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+
 import ch.qos.logback.classic.Level;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -7,19 +26,10 @@ import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.util.thread.ExecutorThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
 
 public class Basal {
     private static final Logger LOG = LoggerFactory.getLogger(Basal.class);
@@ -44,8 +54,12 @@ public class Basal {
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             if ("-p".equals(arg)) {
-                config.port = Integer.valueOf(args[++i]);
-                //TODO check that it is a valid number
+                try {
+                    config.port = Integer.valueOf(args[++i]);
+                } catch (NumberFormatException e) {
+                    LOG.error("Invalid value for port number " + args[i]);
+                    System.exit(1);
+                }
             } else if ("-l".equals(arg)) {
                 Level level = Level.toLevel(args[++i], null);
                 if (level == null) {
@@ -53,12 +67,24 @@ public class Basal {
                     System.exit(1);
                 }
                 config.logLevel = level;
+            } else if ("-t".endsWith(arg)) {
+                try {
+                    config.threads = Integer.parseInt(args[++i]);
+                } catch (NumberFormatException e) {
+                    LOG.error("Invalid valid for number of threads " + args[i]);
+                    System.exit(1);
+                }
             } else if ("--package".equals(arg)) {
                 createPackage = true;
                 packageFile = args[++i];
             } else if ((matcher = pathPattern.matcher(arg)).matches()) {
-                config.paths.put(matcher.group(1), matcher.group(2));
-                //TODO check that file exists
+                String fileName = matcher.group(2);
+                boolean fileExists = new File(fileName).exists();
+                if (!fileExists) {
+                    LOG.error("War-file " + fileName + " was not found");
+                    System.exit(1);
+                }
+                config.paths.put(matcher.group(1), fileName);
             } else {
                 LOG.error("Unrecognized argument " + arg);
                 InputStream input = ClassLoader.getSystemClassLoader().getResourceAsStream(USAGE);
@@ -200,6 +226,23 @@ public class Basal {
 
         Server jetty = new Server(config.port);
         jetty.setHandler(createWebAppsHandler(config.paths));
+        jetty.setThreadPool(new ExecutorThreadPool(Executors.newFixedThreadPool(config.threads, new ThreadFactory() {
+            private final ThreadFactory delegate = Executors.defaultThreadFactory();
+
+            @Override
+            public Thread newThread(Runnable r) {
+                // just making sure that the threads die when the app gets a kill signal
+                Thread thread = delegate.newThread(r);
+                thread.setDaemon(true);
+                return thread;
+            }
+        })));
+        /*
+        //TODO should you be able to configure the timeout? / set it to a good default value or is it already?
+        for (Connector connector : jetty.getConnectors()) {
+            connector.setMaxIdleTime(config.timeout);
+        }
+        */
         try {
             jetty.start();
             jetty.join();
