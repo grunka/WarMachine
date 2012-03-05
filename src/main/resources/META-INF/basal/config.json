@@ -1,5 +1,6 @@
 {
     "port": 8080,
     "logLevel": "INFO",
-    "paths": {}
+    "paths": {},
+    "threads": 100
 }
