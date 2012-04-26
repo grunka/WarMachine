@@ -2,6 +2,7 @@ package se.grunka.warmachine;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
@@ -23,8 +24,8 @@ import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.ThreadFactory;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
@@ -226,17 +227,14 @@ public class WarMachine {
 
         Server jetty = new Server(config.port);
         jetty.setHandler(createWebAppsHandler(config.paths));
-        jetty.setThreadPool(new ExecutorThreadPool(Executors.newFixedThreadPool(config.threads, new ThreadFactory() {
-            private final ThreadFactory delegate = Executors.defaultThreadFactory();
-
+        final ExecutorService executor = Executors.newFixedThreadPool(config.threads);
+        Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
-            public Thread newThread(Runnable r) {
-                // just making sure that the threads die when the app gets a kill signal
-                Thread thread = delegate.newThread(r);
-                thread.setDaemon(true);
-                return thread;
+            public void run() {
+                executor.shutdown();
             }
-        })));
+        });
+        jetty.setThreadPool(new ExecutorThreadPool(executor));
         /*
         //TODO should you be able to configure the timeout? / set it to a good default value or is it already?
         for (Connector connector : jetty.getConnectors()) {
@@ -253,6 +251,8 @@ public class WarMachine {
     }
 
     private void configureLogger() {
-        org.apache.log4j.Logger.getRootLogger().setLevel(config.logLevel);
+        org.apache.log4j.Logger rootLogger = org.apache.log4j.Logger.getRootLogger();
+        rootLogger.setLevel(config.logLevel);
+        rootLogger.addAppender(new ConsoleAppender());
     }
 }
