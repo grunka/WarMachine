@@ -53,21 +53,21 @@ public class WarMachine {
         Matcher matcher;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
-            if ("-p".equals(arg)) {
+            if ("-p".equals(arg) || "--port".equals(arg)) {
                 try {
                     config.port = Integer.valueOf(args[++i]);
                 } catch (NumberFormatException e) {
                     LOG.error("Invalid value for port number " + args[i]);
                     System.exit(1);
                 }
-            } else if ("-l".equals(arg)) {
+            } else if ("-l".equals(arg) || "--level".equals(arg)) {
                 Level level = Level.toLevel(args[++i], null);
                 if (level == null) {
                     LOG.error("Invalid log level " + args[i]);
                     System.exit(1);
                 }
                 config.logLevel = level;
-            } else if ("-t".endsWith(arg)) {
+            } else if ("-t".endsWith(arg) || "--threads".equals(arg)) {
                 try {
                     config.threads = Integer.parseInt(args[++i]);
                 } catch (NumberFormatException e) {
