@@ -4,12 +4,16 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import org.apache.log4j.ConsoleAppender;
 import org.apache.log4j.Level;
+import org.apache.log4j.TTCCLayout;
+import org.eclipse.jetty.server.AbstractConnector;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandler;
 import org.eclipse.jetty.server.handler.ContextHandlerCollection;
 import org.eclipse.jetty.server.handler.DefaultHandler;
 import org.eclipse.jetty.util.thread.ExecutorThreadPool;
 import org.eclipse.jetty.webapp.WebAppContext;
+import org.eclipse.jetty.webapp.WebInfConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,7 +37,6 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class WarMachine {
-    private static final Logger LOG = LoggerFactory.getLogger(WarMachine.class);
     private static final String USAGE = "META-INF/war-machine/usage.txt";
     private static final String CONFIG = "META-INF/war-machine/config.json";
     private static final String WAR_LOCATION = "META-INF/war-machine/war/";
@@ -58,13 +61,13 @@ public class WarMachine {
                 try {
                     config.port = Integer.valueOf(args[++i]);
                 } catch (NumberFormatException e) {
-                    LOG.error("Invalid value for port number " + args[i]);
+                    System.err.println("Invalid value for port number " + args[i]);
                     System.exit(1);
                 }
             } else if ("-l".equals(arg) || "--level".equals(arg)) {
                 Level level = Level.toLevel(args[++i], null);
                 if (level == null) {
-                    LOG.error("Invalid log level " + args[i]);
+                    System.err.println("Invalid log level " + args[i]);
                     System.exit(1);
                 }
                 config.logLevel = level;
@@ -72,7 +75,7 @@ public class WarMachine {
                 try {
                     config.threads = Integer.parseInt(args[++i]);
                 } catch (NumberFormatException e) {
-                    LOG.error("Invalid valid for number of threads " + args[i]);
+                    System.err.println("Invalid valid for number of threads " + args[i]);
                     System.exit(1);
                 }
             } else if ("--package".equals(arg)) {
@@ -82,16 +85,16 @@ public class WarMachine {
                 String fileName = matcher.group(2);
                 boolean fileExists = new File(fileName).exists();
                 if (!fileExists) {
-                    LOG.error("War-file " + fileName + " was not found");
+                    System.err.println("War-file " + fileName + " was not found");
                     System.exit(1);
                 }
                 config.paths.put(matcher.group(1), fileName);
             } else {
-                LOG.error("Unrecognized argument " + arg);
+                System.err.println("Unrecognized argument " + arg);
                 InputStream input = ClassLoader.getSystemClassLoader().getResourceAsStream(USAGE);
                 ByteArrayOutputStream output = new ByteArrayOutputStream();
                 copy(input, output);
-                LOG.error(output.toString());
+                System.err.println(output.toString());
                 System.exit(1);
             }
         }
@@ -199,11 +202,13 @@ public class WarMachine {
         }
     }
 
-    private Handler createWebAppsHandler(Map<String, String> paths) {
+    private Handler createWebAppsHandler(Map<String, String> paths, Logger logger) {
         List<Handler> webApps = new ArrayList<Handler>();
         for (Map.Entry<String, String> path : paths.entrySet()) {
             String fileName = path.getValue();
-            webApps.add(new WebAppContext(fileName, path.getKey()));
+            String contextPath = path.getKey();
+            webApps.add(new WebAppContext(fileName, contextPath));
+            logger.info("Mapping " + fileName + " to " + contextPath);
         }
         webApps.add(new DefaultHandler());
         ContextHandlerCollection contexts = new ContextHandlerCollection();
@@ -212,21 +217,25 @@ public class WarMachine {
     }
 
     public void runForever() {
+        configureLogger();
+
+        final Logger logger = LoggerFactory.getLogger(getClass());
+
         if (config.paths.size() == 0) {
-            LOG.warn("No web apps specified, will only serve 404s");
+            logger.warn("No web apps specified, will only serve 404s");
         }
 
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread t, Throwable e) {
-                LOG.error("Uncaught exception in thread " + String.valueOf(t), e);
+                logger.error("Uncaught exception in thread " + String.valueOf(t), e);
             }
         });
 
-        configureLogger();
-
+        logger.info("Will listen on port " + config.port);
+        logger.info("Will use " + config.threads + " threads");
         Server jetty = new Server(config.port);
-        jetty.setHandler(createWebAppsHandler(config.paths));
+        jetty.setHandler(createWebAppsHandler(config.paths, logger));
         final ExecutorService executor = Executors.newFixedThreadPool(config.threads);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -242,10 +251,12 @@ public class WarMachine {
         }
         */
         try {
+            logger.info("Initializing");
             jetty.start();
+            logger.info("Running");
             jetty.join();
         } catch (Exception e) {
-            LOG.error("Failure while running server", e);
+            logger.error("Failure while running server", e);
             System.exit(1);
         }
     }
@@ -253,6 +264,11 @@ public class WarMachine {
     private void configureLogger() {
         org.apache.log4j.Logger rootLogger = org.apache.log4j.Logger.getRootLogger();
         rootLogger.setLevel(config.logLevel);
-        rootLogger.addAppender(new ConsoleAppender());
+        TTCCLayout layout = new TTCCLayout("ISO8601");
+        rootLogger.addAppender(new ConsoleAppender(layout, ConsoleAppender.SYSTEM_OUT));
+        org.apache.log4j.Logger.getLogger(Server.class).setLevel(Level.ERROR);
+        org.apache.log4j.Logger.getLogger(AbstractConnector.class).setLevel(Level.ERROR);
+        org.apache.log4j.Logger.getLogger(ContextHandler.class).setLevel(Level.ERROR);
+        org.apache.log4j.Logger.getLogger(WebInfConfiguration.class).setLevel(Level.ERROR);
     }
 }
