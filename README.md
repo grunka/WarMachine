@@ -1,6 +1,6 @@
 WarMachine
 =====
-A very minimal java web app server. It combines [Jetty](http://jetty.codehaus.org/jetty/), [Jasper](http://tomcat.apache.org/tomcat-6.0-doc/jasper-howto.html), [Gson](http://code.google.com/p/google-gson/) and [Logback](http://logback.qos.ch/) to let you host war files from a single jar.
+A very minimal java web app server. It combines [Jetty](http://jetty.codehaus.org/jetty/), [Jasper](http://tomcat.apache.org/tomcat-6.0-doc/jasper-howto.html) and [Gson](http://code.google.com/p/google-gson/) to let you host war files from a single jar.
 
 Why?
 ----
