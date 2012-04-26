@@ -1,4 +1,16 @@
-package se.grunka.basal;
+package se.grunka.warmachine;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import org.apache.log4j.Level;
+import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.handler.ContextHandlerCollection;
+import org.eclipse.jetty.server.handler.DefaultHandler;
+import org.eclipse.jetty.util.thread.ExecutorThreadPool;
+import org.eclipse.jetty.webapp.WebAppContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -19,33 +31,21 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
-import ch.qos.logback.classic.Level;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import org.eclipse.jetty.server.Handler;
-import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.server.handler.ContextHandlerCollection;
-import org.eclipse.jetty.server.handler.DefaultHandler;
-import org.eclipse.jetty.util.thread.ExecutorThreadPool;
-import org.eclipse.jetty.webapp.WebAppContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-public class Basal {
-    private static final Logger LOG = LoggerFactory.getLogger(Basal.class);
-    private static final String USAGE = "META-INF/basal/usage.txt";
-    private static final String CONFIG = "META-INF/basal/config.json";
-    private static final String WAR_LOCATION = "META-INF/basal/war/";
+public class WarMachine {
+    private static final Logger LOG = LoggerFactory.getLogger(WarMachine.class);
+    private static final String USAGE = "META-INF/war-machine/usage.txt";
+    private static final String CONFIG = "META-INF/war-machine/config.json";
+    private static final String WAR_LOCATION = "META-INF/war-machine/war/";
     private static final String RESOURCE = "resource:";
     private static final String TEMPORARY_DIRECTORY = "java.io.tmpdir";
-    private final BasalConfig config;
+    private final WarMachineConfig config;
 
-    public Basal(BasalConfig config) {
+    public WarMachine(WarMachineConfig config) {
         this.config = config;
     }
 
     public static void main(String[] args) throws IOException {
-        BasalConfig config = readConfig();
+        WarMachineConfig config = readConfig();
         boolean createPackage = false;
         String packageFile = null;
 
@@ -100,16 +100,16 @@ public class Basal {
         if (createPackage) {
             createPackage(config, packageFile);
         } else {
-            new Basal(config).runForever();
+            new WarMachine(config).runForever();
         }
     }
 
-    private static BasalConfig readConfig() {
-        return gson().fromJson(new InputStreamReader(ClassLoader.getSystemClassLoader().getResourceAsStream(CONFIG)), BasalConfig.class);
+    private static WarMachineConfig readConfig() {
+        return gson().fromJson(new InputStreamReader(ClassLoader.getSystemClassLoader().getResourceAsStream(CONFIG)), WarMachineConfig.class);
     }
 
-    private static void createPackage(BasalConfig config, String packageFile) throws IOException {
-        String jarFile = Basal.class.getProtectionDomain().getCodeSource().getLocation().getFile();
+    private static void createPackage(WarMachineConfig config, String packageFile) throws IOException {
+        String jarFile = WarMachine.class.getProtectionDomain().getCodeSource().getLocation().getFile();
         ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(jarFile));
         try {
             ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(packageFile));
@@ -133,7 +133,7 @@ public class Basal {
         }
     }
 
-    private static void addConfig(BasalConfig config, ZipOutputStream zipOutputStream) throws IOException {
+    private static void addConfig(WarMachineConfig config, ZipOutputStream zipOutputStream) throws IOException {
         for (Map.Entry<String, String> pathEntry : config.paths.entrySet()) {
             File warFile = new File(pathEntry.getValue());
             pathEntry.setValue(RESOURCE + warFile.getName());
@@ -152,7 +152,7 @@ public class Basal {
         return new GsonBuilder().registerTypeAdapter(Level.class, new LevelTypeAdapter()).setPrettyPrinting().create();
     }
 
-    private static void addWars(BasalConfig config, ZipOutputStream zipOutputStream) throws IOException {
+    private static void addWars(WarMachineConfig config, ZipOutputStream zipOutputStream) throws IOException {
         for (String location : config.paths.values()) {
             File currentLocation = new File(location);
             ZipEntry zipEntry = new ZipEntry(WAR_LOCATION + currentLocation.getName());
@@ -167,7 +167,7 @@ public class Basal {
         }
     }
 
-    private static void extractPackagedWars(BasalConfig config) throws IOException {
+    private static void extractPackagedWars(WarMachineConfig config) throws IOException {
         File temporaryDirectory = new File(System.getProperty(TEMPORARY_DIRECTORY));
         for (Map.Entry<String, String> pathEntry : config.paths.entrySet()) {
             String currentLocation = pathEntry.getValue();
@@ -253,16 +253,6 @@ public class Basal {
     }
 
     private void configureLogger() {
-        ch.qos.logback.classic.Logger rootLogger = (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(Logger.ROOT_LOGGER_NAME);
-        /*
-        Iterator<Appender<ILoggingEvent>> appenderIterator = rootLogger.iteratorForAppenders();
-        while(appenderIterator.hasNext()) {
-            Appender<ILoggingEvent> appender = appenderIterator.next();
-            if (appender instanceof OutputStreamAppender) {
-                ((OutputStreamAppender) appender).getEncoder();
-            }
-        }
-        */
-        rootLogger.setLevel(config.logLevel);
+        org.apache.log4j.Logger.getRootLogger().setLevel(config.logLevel);
     }
 }

@@ -1,9 +1,9 @@
-package se.grunka.basal;
+package se.grunka.warmachine;
 
-import ch.qos.logback.classic.Level;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParseException;
+import org.apache.log4j.Level;
 import org.junit.Before;
 import org.junit.Test;
 

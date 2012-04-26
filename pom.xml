@@ -5,7 +5,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>se.grunka</groupId>
-  <artifactId>basal</artifactId>
+  <artifactId>war-machine</artifactId>
   <version>1.0</version>
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -45,7 +45,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>se.grunka.basal.Basal</mainClass>
+              <mainClass>se.grunka.warmachine.WarMachine</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -60,9 +60,9 @@
       <version>2.0</version>
     </dependency>
     <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <version>1.0.0</version>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.6.4</version>
     </dependency>
     <dependency>
       <groupId>junit</groupId>
