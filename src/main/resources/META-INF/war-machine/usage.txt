@@ -1,5 +1,5 @@
 Usage:
-java -jar ${artifactId}-${version}.jar [--package <file>] [-p <port>] [-l <log level>] [-t <threads>] [<context path>=<war file>]*
+java -jar ${artifactId}-${version}.jar [--package <file>] [-p <port>] [-t <threads>] [<context path>=<war file>]*
 
 port = Port number where the server will listen
 log level = The logging level, default is INFO

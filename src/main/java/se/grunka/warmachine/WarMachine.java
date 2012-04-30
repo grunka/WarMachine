@@ -64,13 +64,6 @@ public class WarMachine {
                     System.err.println("Invalid value for port number " + args[i]);
                     System.exit(1);
                 }
-            } else if ("-l".equals(arg) || "--level".equals(arg)) {
-                Level level = Level.toLevel(args[++i], null);
-                if (level == null) {
-                    System.err.println("Invalid log level " + args[i]);
-                    System.exit(1);
-                }
-                config.logLevel = level;
             } else if ("-t".endsWith(arg) || "--threads".equals(arg)) {
                 try {
                     config.threads = Integer.parseInt(args[++i]);
@@ -153,7 +146,7 @@ public class WarMachine {
     }
 
     private static Gson gson() {
-        return new GsonBuilder().registerTypeAdapter(Level.class, new LevelTypeAdapter()).setPrettyPrinting().create();
+        return new GsonBuilder().setPrettyPrinting().create();
     }
 
     private static void addWars(WarMachineConfig config, ZipOutputStream zipOutputStream) throws IOException {
@@ -263,12 +256,12 @@ public class WarMachine {
 
     private void configureLogger() {
         org.apache.log4j.Logger rootLogger = org.apache.log4j.Logger.getRootLogger();
-        rootLogger.setLevel(config.logLevel);
+        rootLogger.setLevel(Level.INFO);
         TTCCLayout layout = new TTCCLayout("ISO8601");
         rootLogger.addAppender(new ConsoleAppender(layout, ConsoleAppender.SYSTEM_OUT));
-        org.apache.log4j.Logger.getLogger(Server.class).setLevel(Level.ERROR);
-        org.apache.log4j.Logger.getLogger(AbstractConnector.class).setLevel(Level.ERROR);
-        org.apache.log4j.Logger.getLogger(ContextHandler.class).setLevel(Level.ERROR);
-        org.apache.log4j.Logger.getLogger(WebInfConfiguration.class).setLevel(Level.ERROR);
+        org.apache.log4j.Logger.getLogger(Server.class).setLevel(Level.WARN);
+        org.apache.log4j.Logger.getLogger(AbstractConnector.class).setLevel(Level.WARN);
+        org.apache.log4j.Logger.getLogger(ContextHandler.class).setLevel(Level.WARN);
+        org.apache.log4j.Logger.getLogger(WebInfConfiguration.class).setLevel(Level.WARN);
     }
 }
