@@ -10,7 +10,7 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <jetty.version>9.4.51.v20230217</jetty.version>
-    <jasper.version>6.0.33</jasper.version>
+    <jasper.version>6.0.47</jasper.version>
   </properties>
 
   <build>
